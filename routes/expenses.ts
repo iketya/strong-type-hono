@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
-
+import { zValidator } from '@hono/zod-validator'
+import {z} from "zod"
 
 type Expenses={
     id:number,
@@ -13,13 +14,20 @@ const fakeExpenses: Expenses[]=[
     {id:3, title:"Rent",amount:1000},
 ];
 
+const createPostSchema = z.object({
+ title: z.string().min(3).max(100),
+ amount: z.number().int().positive()
+
+})
+
 export const expensesRoute = new Hono()
 
 .get("/", async (c) => {
     return c.json({expenses:fakeExpenses});
 })
-.post("/", async (c) => {
-    const expenses =await c.req.json()
-    console.log({expenses})
-    return c.json(expenses);
+.post("/", zValidator("json",createPostSchema), async (c) => {
+    const data =await c.req.valid("json")
+    const expense = createPostSchema.parse(data)
+    fakeExpenses.push({...expense, id: fakeExpenses.length})
+    return c.json(expense);
 });
