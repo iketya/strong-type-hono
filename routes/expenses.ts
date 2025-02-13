@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import {z} from "zod"
 
+
 type Expenses={
     id:number,
     title:string,
@@ -27,7 +28,16 @@ export const expensesRoute = new Hono()
 })
 .post("/", zValidator("json",createPostSchema), async (c) => {
     const data =await c.req.valid("json")
-    const expense = createPostSchema.parse(data)
-    fakeExpenses.push({...expense, id: fakeExpenses.length})
+    fakeExpenses.push({...expense, id: fakeExpenses.length+1})
     return c.json(expense);
+})
+.get("/:id{[0-9]+}", (c) => {
+
+    const id = Number.parseInt(c.req.param('id'));
+    const expense = fakeExpenses.find(expense => expense.id === id)
+    if (!expense){
+        return c.notFound()
+       
+    } 
+    return c.json({expense})
 });
