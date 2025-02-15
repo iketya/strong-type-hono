@@ -3,11 +3,20 @@ import { zValidator } from '@hono/zod-validator'
 import {z} from "zod"
 
 
-type Expenses={
-    id:number,
-    title:string,
-    amount:number,
-}
+
+const expenseSchema = z.object({
+    id: z.number().int().positive().min(1),
+    title: z.string().min(3).max(100),
+    amount: z.number().int().positive()
+   
+
+
+})
+
+type Expense = z.infer<typeof expenseSchema>
+
+const createPostSchema = expenseSchema.omit({id: true})
+ 
 
 const fakeExpenses: Expenses[]=[
     {id:1, title:"Groceries",amount:50},
@@ -15,11 +24,7 @@ const fakeExpenses: Expenses[]=[
     {id:3, title:"Rent",amount:1000},
 ];
 
-const createPostSchema = z.object({
- title: z.string().min(3).max(100),
- amount: z.number().int().positive()
 
-})
 
 export const expensesRoute = new Hono()
 
@@ -29,6 +34,7 @@ export const expensesRoute = new Hono()
 .post("/", zValidator("json",createPostSchema), async (c) => {
     const data =await c.req.valid("json")
     fakeExpenses.push({...expense, id: fakeExpenses.length+1})
+    c.status(201)
     return c.json(expense);
 })
 .get("/:id{[0-9]+}", (c) => {
@@ -40,4 +46,15 @@ export const expensesRoute = new Hono()
        
     } 
     return c.json({expense})
-});
+})
+.delete("/:id{[0-9]+}", (c) => {
+
+    const id = Number.parseInt(c.req.param('id'));
+    const index = fakeExpenses.findIndex(expense => expense.id === id)
+    if (index === -1){
+        return c.notFound()
+       
+    } 
+    const deletedExpense = fakeExpenses.splice(index,1)[0];
+    return c.json({expense:deletedExpense});
+})
